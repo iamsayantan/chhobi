@@ -2,55 +2,32 @@ package main
 
 import (
 	"fmt"
-	"image"
-	"io/ioutil"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/iamsayantan/chhobi/manipulation"
 
 	"github.com/disintegration/imaging"
 )
 
-var imageName = "DSC_6119.jpg"
+var imageName = "./images/manhattan.jpg"
 
 func main() {
-
-	// imageFile, err := imaging.Open(imageName)
-
-	// if err != nil {
-	// 	fmt.Println("Error opening image")
-	// 	log.Fatal(err)
-	// }
-	files, err := ioutil.ReadDir("./images")
+	imageFile, err := imaging.Open(imageName)
 	if err != nil {
+		fmt.Println("Error opening image")
 		log.Fatal(err)
 	}
 
-	var images []image.Image
-	for _, f := range files {
-		imageFile, err := imaging.Open("./images/" + f.Name())
+	cropptingStart := time.Now()
+	croppedImages := manipulation.ResizeMultipleCrop(imageFile, manipulation.LargeCrop, manipulation.MediumCrop, manipulation.ThumbnailCrop)
+	croppingEnd := time.Now()
 
-		if err != nil {
-			fmt.Println("Error opening image")
-			log.Fatal(err)
-		}
-		images = append(images, imageFile)
-	}
+	diff := croppingEnd.Sub(cropptingStart)
 
-	croppedImages := manipulation.ResizeImageMultiple(images, manipulation.ThumbnailCrop)
-
+	fmt.Println("Cropping time taken", diff.Seconds())
 	for i, img := range croppedImages {
 		imaging.Save(img, "./thumbs/thumb_"+strconv.Itoa(i)+".jpg")
 	}
-	// cropped, err := manipulation.ResizeImage(imageFile, manipulation.MediumCrop)
-	// if err != nil {
-	// 	fmt.Println("Error Resizing image")
-	// 	log.Fatal(err)
-	// }
-
-	// err = imaging.Save(cropped, "./thumbs/thumb_"+imageName)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
 }

@@ -26,7 +26,7 @@ type cropJob struct {
 var cropJobCh = make(chan cropJob, 20)
 var cropResCh = make(chan *image.NRGBA, 20)
 
-var noOfWorkers = 10
+var noOfWorkers = 5
 
 // These are default crops available. Custom crop can be acheive by
 // providing a CropSize type.
@@ -62,9 +62,9 @@ func ResizeImage(img image.Image, crop CropSize) *image.NRGBA {
 	return resize(img, crop.Width, crop.Height)
 }
 
-// ResizeImageMultiple resizes multiple images and returns the references of
+// ResizeMultipleImage resizes multiple images and returns the references of
 // the resized images
-func ResizeImageMultiple(imgs []image.Image, crop CropSize) []*image.NRGBA {
+func ResizeMultipleImage(imgs []image.Image, crop CropSize) []*image.NRGBA {
 	var cropped []*image.NRGBA
 
 	// add all the images to the cropJobCh channel as cropJob for processing.
@@ -75,6 +75,27 @@ func ResizeImageMultiple(imgs []image.Image, crop CropSize) []*image.NRGBA {
 		}
 		close(cropJobCh)
 	}(imgs, crop)
+	go createCropWorker(noOfWorkers)
+
+	for croppedImage := range cropResCh {
+		cropped = append(cropped, croppedImage)
+	}
+
+	return cropped
+}
+
+// ResizeMultipleCrop resizes a single image into multiple crop sizes that are passed
+func ResizeMultipleCrop(img image.Image, crops ...CropSize) []*image.NRGBA {
+	var cropped []*image.NRGBA;
+
+	go func(imgToCrop image.Image, crops []CropSize) {
+		for _, crop := range crops {
+			cropJ := cropJob{image: img, crop: crop}
+			cropJobCh <- cropJ
+		}
+		close(cropJobCh)
+	} (img, crops)
+	
 	go createCropWorker(noOfWorkers)
 
 	for croppedImage := range cropResCh {
